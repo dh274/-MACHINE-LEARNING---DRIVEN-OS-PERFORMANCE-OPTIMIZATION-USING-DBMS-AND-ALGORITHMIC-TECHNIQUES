@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML-Driven OS Performance Optimization</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .btn.secondary {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+        }
+
+        .btn.success {
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+        }
+
+        .status-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .status-item {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .status-item.active {
+            border-left-color: #4CAF50;
+        }
+
+        .status-item.warning {
+            border-left-color: #FF9800;
+        }
+
+        .status-item.error {
+            border-left-color: #F44336;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .metric-value {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .cpu { color: #ff6b6b; }
+        .memory { color: #4ecdc4; }
+        .disk { color: #45b7d1; }
+        .network { color: #96ceb4; }
+        .health { color: #f39c12; }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .health-score {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .health-score .score {
+            font-size: 4em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .risk-indicator {
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .risk-low { background: #d4edda; color: #155724; }
+        .risk-medium { background: #fff3cd; color: #856404; }
+        .risk-high { background: #f8d7da; color: #721c24; }
+
+        .suggestions-panel {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .suggestion-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .suggestion-item.high { border-left-color: #dc3545; }
+        .suggestion-item.medium { border-left-color: #ffc107; }
+        .suggestion-item.low { border-left-color: #28a745; }
+
+        .alert-item {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .alert-item.high {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        .prediction-display {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+
+        .prediction-item {
+            padding: 15px;
+        }
+
+        .prediction-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .confidence {
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .confidence.high { background: #d4edda; color: #155724; }
+        .confidence.medium { background: #fff3cd; color: #856404; }
+        .confidence.low { background: #f8d7da; color: #721c24; }
+
+        .anomaly-highlight {
+            background: #ffebee !important;
+            border: 2px solid #f44336 !important;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success { background: #28a745; }
+        .notification.error { background: #dc3545; }
+        .notification.warning { background: #ffc107; color: #333; }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 ML-Driven OS Performance Optimization</h1>
+            <p>Real-time monitoring with machine learning insights and algorithmic optimization</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="refreshData()">🔄 Refresh</button>
+            <button class="btn secondary" onclick="toggleMonitoring()">📊 Toggle Monitoring</button>
+            <button class="btn success" onclick="trainModels()">🤖 Train ML Models</button>
+            <button class="btn" onclick="toggleAutoRefresh()">⏰ Auto Refresh</button>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-item" id="monitoring-status">
+                <strong>Monitoring</strong><br>
+                <span id="monitoring-text">Checking...</span>
+            </div>
+            <div class="status-item" id="database-status">
+                <strong>Database</strong><br>
+                <span id="database-text">Checking...</span>
+            </div>
+            <div class="status-item" id="ml-status">
+                <strong>ML Models</strong><br>
+                <span id="ml-text">Checking...</span>
+            </div>
+            <div class="status-item" id="anomaly-status">
+                <strong>Anomalies</strong><br>
+                <span id="anomaly-text">Normal</span>
+            </div>
+        </div>
+
+        <div class="grid">
+            <!-- Current Metrics -->
+            <div class="card">
+                <h3>🖥️ CPU Usage</h3>
+                <div class="metric-value cpu" id="cpu-value">0%</div>
+                <div id="cpu-prediction" class="prediction-display" style="display: none;">
+                    <div>
+                        <small>Predicted (5min)</small>
+                        <div class="prediction-value cpu" id="cpu-pred-value">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>💾 Memory Usage</h3>
+                <div class="metric-value memory" id="memory-value">0%</div>
+                <div id="memory-prediction" class="prediction-display" style="display: none;">
+                    <div>
+                        <small>Predicted (5min)</small>
+                        <div class="prediction-value memory" id="memory-pred-value">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>💿 Disk Usage</h3>
+                <div class="metric-value disk" id="disk-value">0%</div>
+            </div>
+
+            <div class="card">
+                <h3>📡 Network</h3>
+                <div class="metric-value network" id="network-value">0 MB</div>
+            </div>
+
+            <!-- Health Score -->
+            <div class="card">
+                <h3>❤️ System Health</h3>
+                <div class="health-score">
+                    <div class="score health" id="health-score">100</div>
+                    <div class="risk-indicator" id="risk-level">Low Risk</div>
+                </div>
+            </div>
+
+            <!-- ML Confidence -->
+            <div class="card" id="ml-confidence-card" style="display: none;">
+                <h3>🎯 ML Confidence</h3>
+                <div style="text-align: center;">
+                    <div class="confidence" id="confidence-level">High</div>
+                    <div style="margin-top: 10px;">
+                        <small>Model Accuracy</small>
+                        <div id="model-accuracy">R² = 0.85</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Charts -->
+        <div class="chart-container">
+            <h3>📈 Performance History & Predictions</h3>
+            <div id="performance-chart" style="height: 400px;"></div>
+        </div>
+
+        <!-- System Health Gauge -->
+        <div class="chart-container">
+            <h3>🎯 Real-time System Gauges</h3>
+            <div id="gauges-chart" style="height: 300px;"></div>
+        </div>
+
+        <!-- Alerts Panel -->
+        <div class="suggestions-panel" id="alerts-panel" style="display: none;">
+            <h3>⚠️ System Alerts</h3>
+            <div id="alerts-container"></div>
+        </div>
+
+        <!-- Optimization Suggestions -->
+        <div class="suggestions-panel">
+            <h3>🔧 Optimization Suggestions</h3>
+            <div id="suggestions-container">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading optimization analysis...
+                </div>
+            </div>
+        </div>
+
+        <!-- Anomaly Detection Results -->
+        <div class="suggestions-panel" id="anomaly-panel" style="display: none;">
+            <h3>🔍 Anomaly Detection</h3>
+            <div id="anomaly-container"></div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Global variables
+        let isAutoRefresh = false;
+        let autoRefreshInterval = null;
+        let performanceData = {
+            timestamps: [],
+            cpu: [],
+            memory: [],
+            disk: [],
+            network: [],
+            predicted_cpu: [],
+            predicted_memory: [],
+            anomalies: []
+        };
+
+        // API base URL
+        const API_BASE = '/api';
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshData();
+            checkSystemStatus();
+        });
+
+        // API helper functions
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(`${API_BASE}${endpoint}`, options);
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'API request failed');
+                }
+
+                return result;
+            } catch (error) {
+                console.error(`API call failed: ${endpoint}`, error);
+                showNotification(`API Error: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        // Main data refresh function
+        async function refreshData() {
+            try {
+                showNotification('Refreshing data...', 'success');
+                
+                // Get comprehensive dashboard data
+                const dashboardData = await apiCall('/dashboard/data');
+                
+                if (dashboardData.success) {
+                    updateDashboard(dashboardData.dashboard_data);
+                }
+                
+            } catch (error) {
+                console.error('Failed to refresh data:', error);
+            }
+        }
+
+        // Update dashboard with new data
+        function updateDashboard(data) {
+            // Update current metrics
+            if (data.current_metrics) {
+                updateCurrentMetrics(data.current_metrics);
+            }
+
+            // Update predictions
+            if (data.predictions) {
+                updatePredictions(data.predictions);
+            }
+
+            // Update anomalies
+            if (data.anomalies) {
+                updateAnomalies(data.anomalies);
+            }
+
+            // Update optimization
+            if (data.optimization) {
+                updateOptimization(data.optimization);
+            }
+
+            // Update charts
+            if (data.recent_history) {
+                updateCharts(data.recent_history, data.predictions);
+            }
+
+            // Update status
+            if (data.monitoring_status) {
+                updateSystemStatus(data.monitoring_status);
+            }
+        }
+
+        // Update current metrics display
+        function updateCurrentMetrics(metrics) {
+            document.getElementById('cpu-value').textContent = `${metrics.cpu}%`;
+            document.getElementById('memory-value').textContent = `${metrics.memory}%`;
+            document.getElementById('disk-value').textContent = `${metrics.disk}%`;
+            document.getElementById('network-value').textContent = `${metrics.network} MB`;
+
+            // Add anomaly highlighting if needed
+            const cpuCard = document.getElementById('cpu-value').closest('.card');
+            const memoryCard = document.getElementById('memory-value').closest('.card');
+            
+            // Remove existing anomaly classes
+            cpuCard.classList.remove('anomaly-highlight');
+            memoryCard.classList.remove('anomaly-highlight');
+        }
+
+        // Update predictions display
+        function updatePredictions(predictions) {
+            if (predictions && predictions.predicted_cpu !== undefined) {
+                document.getElementById('cpu-pred-value').textContent = `${predictions.predicted_cpu}%`;
+                document.getElementById('memory-pred-value').textContent = `${predictions.predicted_memory}%`;
+                
+                document.getElementById('cpu-prediction').style.display = 'block';
+                document.getElementById('memory-prediction').style.display = 'block';
+                document.getElementById('ml-confidence-card').style.display = 'block';
+
+                // Update confidence
+                const confidence = predictions.confidence || 'medium';
+                const confidenceEl = document.getElementById('confidence-level');
+                confidenceEl.textContent = confidence.charAt(0).toUpperCase() + confidence.slice(1);
+                confidenceEl.className = `confidence ${confidence}`;
+
+                // Update model accuracy
+                if (predictions.model_accuracy) {
+                    const avgR2 = ((predictions.model_accuracy.cpu_r2 || 0) + 
+                                  (predictions.model_accuracy.memory_r2 || 0)) / 2;
+                    document.getElementById('model-accuracy').textContent = `R² = ${avgR2.toFixed(3)}`;
+                }
+            }
+        }
+
+        // Update anomaly detection results
+        function updateAnomalies(anomalies) {
+            const anomalyStatus = document.getElementById('anomaly-status');
+            const anomalyText = document.getElementById('anomaly-text');
+            const anomalyPanel = document.getElementById('anomaly-panel');
+            const anomalyContainer = document.getElementById('anomaly-container');
+
+            if (anomalies.is_anomaly) {
+                anomalyStatus.className = 'status-item error';
+                anomalyText.textContent = `${anomalies.severity.toUpperCase()} Anomaly`;
+                
+                // Show anomaly panel
+                anomalyPanel.style.display = 'block';
+                
+                // Display anomaly details
+                let anomalyHtml = `
+                    <div class="alert-item high">
+                        <strong>🚨 Anomaly Detected!</strong><br>
+                        Severity: ${anomalies.severity}<br>
+                        Detection Method: ${anomalies.detection_method}
+                    </div>
+                `;
+
+                if (anomalies.anomalies && anomalies.anomalies.length > 0) {
+                    anomalies.anomalies.forEach(anomaly => {
+                        anomalyHtml += `
+                            <div class="alert-item">
+                                <strong>${anomaly.metric.toUpperCase()} Anomaly</strong><br>
+                                Current: ${anomaly.current_value.toFixed(2)}<br>
+                                Threshold: ${anomaly.threshold.toFixed(2)}<br>
+                                Severity: ${anomaly.severity}
+                            </div>
+                        `;
+
+                        // Highlight anomalous metrics
+                        const metricCard = document.getElementById(`${anomaly.metric}-value`).closest('.card');
+                        metricCard.classList.add('anomaly-highlight');
+                    });
+                }
+
+                anomalyContainer.innerHTML = anomalyHtml;
+            } else {
+                anomalyStatus.className = 'status-item active';
+                anomalyText.textContent = 'Normal';
+                anomalyPanel.style.display = 'none';
+            }
+        }
+
+        // Update optimization analysis
+        function updateOptimization(optimization) {
+            // Update health score
+            const healthInfo = optimization.health_assessment;
+            if (healthInfo) {
+                document.getElementById('health-score').textContent = healthInfo.health_score;
+                
+                const riskLevel = document.getElementById('risk-level');
+                riskLevel.textContent = `${healthInfo.risk_level.charAt(0).toUpperCase() + healthInfo.risk_level.slice(1)} Risk`;
+                riskLevel.className = `risk-indicator risk-${healthInfo.risk_level}`;
+            }
+
+            // Update alerts
+            if (optimization.alerts && optimization.alerts.length > 0) {
+                const alertsPanel = document.getElementById('alerts-panel');
+                const alertsContainer = document.getElementById('alerts-container');
+                
+                alertsPanel.style.display = 'block';
+                
+                let alertsHtml = '';
+                optimization.alerts.forEach(alert => {
+                    alertsHtml += `
+                        <div class="alert-item ${alert.severity}">
+                            <strong>${alert.message}</strong><br>
+                            <small>Type: ${alert.type} | Time: ${new Date(alert.timestamp).toLocaleTimeString()}</small>
+                        </div>
+                    `;
+                });
+                
+                alertsContainer.innerHTML = alertsHtml;
+            } else {
+                document.getElementById('alerts-panel').style.display = 'none';
+            }
+
+            // Update suggestions
+            const suggestionsContainer = document.getElementById('suggestions-container');
+            
+            if (optimization.optimization_suggestions && optimization.optimization_suggestions.length > 0) {
+                let suggestionsHtml = '';
+                
+                optimization.optimization_suggestions.forEach(suggestion => {
+                    suggestionsHtml += `
+                        <div class="suggestion-item ${suggestion.priority}">
+                            <strong>${suggestion.suggestion}</strong><br>
+                            <small>Category: ${suggestion.category} | Priority: ${suggestion.priority}</small><br>
+                            <small>${suggestion.details}</small>
+                        </div>
+                    `;
+                });
+                
+                suggestionsContainer.innerHTML = suggestionsHtml;
+            } else {
+                suggestionsContainer.innerHTML = `
+                    <div class="suggestion-item low">
+                        <strong>✅ System Performing Well</strong><br>
+                        <small>No optimization suggestions at this time.</small>
+                    </div>
+                `;
+            }
+        }
+
+        // Update charts
+        function updateCharts(history, predictions) {
+            // Update performance history chart
+            updatePerformanceChart(history, predictions);
+            
+            // Update gauges
+            updateGauges();
+        }
+
+        // Update performance chart with history and predictions
+        function updatePerformanceChart(history, predictions) {
+            if (!history || history.length === 0) {
+                return;
+            }
+
+            const timestamps = history.map(h => new Date(h.timestamp));
+            const cpuData = history.map(h => h.cpu);
+            const memoryData = history.map(h => h.memory);
+            const diskData = history.map(h => h.disk);
+
+            const traces = [
+                {
+                    x: timestamps,
+                    y: cpuData,
+                    name: 'CPU %',
+                    type: 'scatter',
+                    line: { color: '#ff6b6b', width: 3 }
+                },
+                {
+                    x: timestamps,
+                    y: memoryData,
+                    name: 'Memory %',
+                    type: 'scatter',
+                    line: { color: '#4ecdc4', width: 3 }
+                },
+                {
+                    x: timestamps,
+                    y: diskData,
+                    name: 'Disk %',
+                    type: 'scatter',
+                    line: { color: '#45b7d1', width: 3 }
+                }
+            ];
+
+            // Add prediction lines if available
+            if (predictions && predictions.predicted_cpu !== undefined) {
+                const now = new Date();
+                const futureTime = new Date(now.getTime() + 5 * 60000); // 5 minutes ahead
+                
+                traces.push({
+                    x: [now, futureTime],
+                    y: [cpuData[cpuData.length - 1], predictions.predicted_cpu],
+                    name: 'CPU Prediction',
+                    type: 'scatter',
+                    line: { color: '#ff6b6b', width: 2, dash: 'dash' },
+                    opacity: 0.7
+                });
+
+                traces.push({
+                    x: [now, futureTime],
+                    y: [memoryData[memoryData.length - 1], predictions.predicted_memory],
+                    name: 'Memory Prediction',
+                    type: 'scatter',
+                    line: { color: '#4ecdc4', width: 2, dash: 'dash' },
+                    opacity: 0.7
+                });
+            }
+
+            const layout = {
+                title: 'System Performance Over Time',
+                xaxis: { title: 'Time' },
+                yaxis: { title: 'Usage (%)' },
+                showlegend: true,
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: { family: 'Segoe UI, sans-serif' }
+            };
+
+            Plotly.newPlot('performance-chart', traces, layout, {responsive: true});
+        }
+
+        // Update gauge charts
+        function updateGauges() {
+            const cpuValue = parseFloat(document.getElementById('cpu-value').textContent);
+            const memoryValue = parseFloat(document.getElementById('memory-value').textContent);
+            const diskValue = parseFloat(document.getElementById('disk-value').textContent);
+
+            const gauges = [
+                {
+                    type: "indicator",
+                    mode: "gauge+number",
+                    value: cpuValue,
+                    title: { text: "CPU %" },
+                    gauge: {
+                        axis: { range: [null, 100] },
+                        bar: { color: "#ff6b6b" },
+                        steps: [
+                            { range: [0, 50], color: "lightgray" },
+                            { range: [50, 80], color: "yellow" },
+                            { range: [80, 100], color: "red" }
+                        ],
+                        threshold: {
+                            line: { color: "red", width: 4 },
+                            thickness: 0.75,
+                            value: 90
+                        }
+                    },
+                    domain: { x: [0, 0.33], y: [0, 1] }
+                },
+                {
+                    type: "indicator",
+                    mode: "gauge+number",
+                    value: memoryValue,
+                    title: { text: "Memory %" },
+                    gauge: {
+                        axis: { range: [null, 100] },
+                        bar: { color: "#4ecdc4" },
+                        steps: [
+                            { range: [0, 60], color: "lightgray" },
+                            { range: [60, 85], color: "yellow" },
+                            { range: [85, 100], color: "red" }
+                        ],
+                        threshold: {
+                            line: { color: "red", width: 4 },
+                            thickness: 0.75,
+                            value: 90
+                        }
+                    },
+                    domain: { x: [0.33, 0.66], y: [0, 1] }
+                },
+                {
+                    type: "indicator",
+                    mode: "gauge+number",
+                    value: diskValue,
+                    title: { text: "Disk %" },
+                    gauge: {
+                        axis: { range: [null, 100] },
+                        bar: { color: "#45b7d1" },
+                        steps: [
+                            { range: [0, 70], color: "lightgray" },
+                            { range: [70, 90], color: "yellow" },
+                            { range: [90, 100], color: "red" }
+                        ],
+                        threshold: {
+                            line: { color: "red", width: 4 },
+                            thickness: 0.75,
+                            value: 95
+                        }
+                    },
+                    domain: { x: [0.66, 1], y: [0, 1] }
+                }
+            ];
+
+            const layout = {
+                title: 'Current System Usage',
+                height: 300,
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: { family: 'Segoe UI, sans-serif' }
+            };
+
+            Plotly.newPlot('gauges-chart', gauges, layout, {responsive: true});
+        }
+
+        // System status functions
+        async function checkSystemStatus() {
+            try {
+                const status = await apiCall('/monitoring/status');
+                updateSystemStatus(status);
+            } catch (error) {
+                console.error('Failed to check system status:', error);
+            }
+        }
+
+        function updateSystemStatus(status) {
+            // Update monitoring status
+            const monitoringStatus = document.getElementById('monitoring-status');
+            const monitoringText = document.getElementById('monitoring-text');
+            
+            if (status.monitoring_active) {
+                monitoringStatus.className = 'status-item active';
+                monitoringText.textContent = 'Active';
+            } else {
+                monitoringStatus.className = 'status-item';
+                monitoringText.textContent = 'Inactive';
+            }
+
+            // Update database status
+            const databaseStatus = document.getElementById('database-status');
+            const databaseText = document.getElementById('database-text');
+            
+            if (status.database_connected) {
+                databaseStatus.className = 'status-item active';
+                databaseText.textContent = 'Connected';
+            } else {
+                databaseStatus.className = 'status-item error';
+                databaseText.textContent = 'Disconnected';
+            }
+
+            // Update ML status
+            const mlStatus = document.getElementById('ml-status');
+            const mlText = document.getElementById('ml-text');
+            
+            if (status.ml_models_trained) {
+                mlStatus.className = 'status-item active';
+                mlText.textContent = 'Trained';
+            } else {
+                mlStatus.className = 'status-item warning';
+                mlText.textContent = 'Not Trained';
+            }
+        }
+
+        // Control functions
+        async function toggleMonitoring() {
+            try {
+                const status = await apiCall('/monitoring/status');
+                
+                if (status.monitoring_active) {
+                    await apiCall('/monitoring/stop', 'POST');
+                    showNotification('Monitoring stopped', 'warning');
+                } else {
+                    await apiCall('/monitoring/start', 'POST');
+                    showNotification('Monitoring started', 'success');
+                }
+                
+                checkSystemStatus();
+            } catch (error) {
+                console.error('Failed to toggle monitoring:', error);
+            }
+        }
+
+        async function trainModels() {
+            try {
+                showNotification('Training ML models...', 'success');
+                
+                const result = await apiCall('/ml/train', 'POST', { hours: 24 });
+                
+                if (result.success) {
+                    showNotification('ML models trained successfully!', 'success');
+                    checkSystemStatus();
+                    refreshData();
+                }
+            } catch (error) {
+                console.error('Failed to train models:', error);
+            }
+        }
+
+        function toggleAutoRefresh() {
+            if (isAutoRefresh) {
+                clearInterval(autoRefreshInterval);
+                isAutoRefresh = false;
+                showNotification('Auto-refresh disabled', 'warning');
+            } else {
+                autoRefreshInterval = setInterval(refreshData, 10000); // 10 seconds
+                isAutoRefresh = true;
+                showNotification('Auto-refresh enabled (10s)', 'success');
+            }
+        }
+
+        // Utility functions
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize with first data load
+        refreshData();
+    </script>
+</body>
+</html>
